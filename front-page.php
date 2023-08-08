@@ -17,7 +17,7 @@
 
           <?php 
             // variable to store todays date
-            // has to the same date format as the custom field 'event_date'
+            // has to have the same date format as the custom field 'event_date'
             $today = date('Ymd');
             // variable to store custom query instance
             $homepageEvents = new WP_Query(array(
@@ -45,40 +45,19 @@
 
             while($homepageEvents->have_posts()) {
               $homepageEvents->the_post();
-              ?>
               
-              <div class="event-summary">
-                <!-- NB the dates here are the the dte of the event -->
-                <!-- not when the event post was published! -->
-                <!-- so it needs a custom field -->
-                <!-- see mu-plugins/university-post-types.php -->
-                <!-- and enable custom fields in editor > preferences > panels -->
-                <!-- then get custom-field plugin 'Advanced Custom Fields (ACF)' -->
-                <!-- if you get 'Download failed. No working transports found' see below -->
-                <!-- https://wordpress.org/support/topic/download-failed-no-working-transports-found-2/ -->
-                <!-- download the plugin from https://wordpress.org/plugins/ -->
-                <!-- then go to wp-admin plugins and choose upload -->
-                
-                <a class="event-summary__date t-center" href="<?php the_permalink(); ?>">
-                  <span class="event-summary__month"><?php 
-                    // object eventDate is an instance of php class DateTime
-                    // we can instantiate it with an argument of the custom field date
-                    $eventDate = new DateTime(get_field('event_date'));
-                    echo $eventDate->format('M');
-                  ?></span>
-                  <span class="event-summary__day"><?php echo $eventDate->format('d'); ?></span>
-                </a>
-                <div class="event-summary__content">
-                  <h5 class="event-summary__title headline headline--tiny"><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h5>
-                  <p><?php if(has_excerpt()) {
-                      echo get_the_excerpt();
-                  } else {
-                    echo wp_trim_words(get_the_content(), 18); 
-                  } ?> <a href="<?php the_permalink(); ?>" class="nu gray">Learn more</a></p>
-                </div>
-              </div>
-
-            <?php } wp_reset_postdata();
+              // get_template_part takes 2 args, 2nd one is optional
+              // NB don't need .php
+              // 2nd argument is a suffix to the template_part
+              // e.g. if 2nd arg is 'excerpt' get_template_part will look for content-event
+              // use case: getting template-part dynamically
+              // 1st arg 'template-parts/content'
+              // 2nd arg get_post_type();
+              // would get template-parts/content-event, content-program or content-professor etc 
+              // get_template_part('template-parts/content', 'event');
+              get_template_part('template-parts/content-event');
+            
+            } wp_reset_postdata();
           ?>
 
           <p class="t-center no-margin"><a href="<?php echo get_post_type_archive_link('event'); ?>" class="btn btn--blue">View All Events</a></p>
