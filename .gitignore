@@ -2,3 +2,9 @@ assets-not-build/
 
 build/
 node_modules
+
+# env
+.env
+
+# for the api keys
+api-keys.php

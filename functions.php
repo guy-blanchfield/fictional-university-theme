@@ -150,4 +150,16 @@ function university_adjust_queries($query) {
 // it passes the default query object as an argument
 add_action('pre_get_posts', 'university_adjust_queries');
 
+
+// require api-keys.php for the map api key
+require_once 'api-keys.php';
+
+// inform acf about the map api key
+
+function universityMapKey($api) {
+    $api['key'] = MAP_API_KEY;
+    return $api;
+}
+add_filter('acf/fields/google_map/api', 'universityMapKey');
+
 ?>
