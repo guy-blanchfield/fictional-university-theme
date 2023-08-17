@@ -72,6 +72,7 @@ function university_files() {
     // NULL if there are no dependencies
     // fourth arg is for a version number
     // final arg is whether to put the script inside the closing body tag (true) or in the head section (false)
+    wp_enqueue_script('googleMap', '//maps.googleapis.com/maps/api/js?key='.MAP_API_KEY, NULL, '1.0', true);
     wp_enqueue_script('main-university-js', get_theme_file_uri('/build/index.js'), array('jquery'), '1.0', true);
     // first arg for wp_enqueue_style is a nickname for the stylesheet we are about to load
     // it's a nickname to associate with the second arg, not something to load or look for
@@ -151,9 +152,7 @@ function university_adjust_queries($query) {
 add_action('pre_get_posts', 'university_adjust_queries');
 
 
-// require api-keys.php for the map api key
-require_once 'api-keys.php';
-
+// MAP_API_KEY is currently defined in wp-config
 // inform acf about the map api key
 
 function universityMapKey($api) {
