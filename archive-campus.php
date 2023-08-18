@@ -18,19 +18,14 @@ pageBanner(array(
     $mapLocation = get_field('map_location');
     ?>
 
-    <div class="marker" data-lat="<?php echo $mapLocation['lat']; ?>" data-lng="<?php echo $mapLocation['lng']; ?>"></div>  
+    <div class="marker" data-lat="<?php echo $mapLocation['lat']; ?>" data-lng="<?php echo $mapLocation['lng']; ?>">
     
-    <?php
-  }
-
-
-
-  // does the pagination thing
-  // will only show if there are more posts than the 'pages show at most'
-  // setting, which is in settings > reading
-  echo paginate_links();
-
-?>
+    <h3><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h3>
+    <?php echo $mapLocation['address'] ?>
+  
+    </div>  
+    
+    <?php } ?>
 </div>
 
 </div>
