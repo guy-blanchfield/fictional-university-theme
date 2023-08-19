@@ -120,14 +120,17 @@ function university_features() {
 add_action('after_setup_theme','university_features');
 
 function university_adjust_queries($query) {
-    // variable to store todays date
-    // has to the same date format as the custom field 'event_date'
 
-    if (!is_admin() AND is_post_type_archive('program') AND is_main_query()) {
+    if (!is_admin() AND is_post_type_archive('campus') AND $query->is_main_query()) {
+        // list all posts on the same page
+        $query->set('posts_per_page', -1);
+    }
+
+    if (!is_admin() AND is_post_type_archive('program') AND $query->is_main_query()) {
         $query->set('orderby','title');
         $query->set('order', 'ASC');
         // list all posts on the same page
-        $query->set('posts_per_page',-1);
+        $query->set('posts_per_page', -1);
     }
 
     if (!is_admin() AND is_post_type_archive('event') AND $query->is_main_query()) {

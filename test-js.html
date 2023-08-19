@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<div class="some-div">This is a div</div>
+		<div class="some-other-div">This is another div</div>
+
+		<script>
+			console.log("testing");
+			// document.querySelector(".js-search-trigger").addEventListener("click", () => {console.log("openButton clicked");});
+
+			// document.querySelector(".some-other-div").style.visibility = "hidden";
+			document.querySelector(".some-other-div").addEventListener("click", () => {
+				console.log("some other div clicked");
+			});
+		</script>
+	</body>
+</html>
