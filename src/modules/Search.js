@@ -83,6 +83,61 @@ class Search {
 		this.previousValue = this.searchField.value;
 	}
 
+	async doFetch(url, query) {
+		const response = await fetch(url + query);
+		const posts = await response.json();
+
+		// then do something with the results
+		console.log(`posts[0].title.rendered: ${posts[0].title.rendered}`);
+		// let testArray = ["red", "orange", "yellow"];
+
+		//  clear out the resultsDiv
+		this.resultsDiv.textContent = "";
+
+		// the heading
+		const resultsHeading = document.createElement("h2");
+		resultsHeading.classList.add("search-overlay__section-title");
+		const resultsHeadingContent = document.createTextNode("General Information");
+		resultsHeading.appendChild(resultsHeadingContent);
+		// the ul
+		const resultsList = document.createElement("ul");
+		resultsList.classList.add("link-list", "min-list");
+		// const searchListItem = createTextNode('General Information');
+		this.resultsDiv.appendChild(resultsHeading);
+		this.resultsDiv.appendChild(resultsList);
+
+		posts.forEach((post) => {
+			// the li
+			const resultsLi = document.createElement("li");
+			// the link
+			const resultsLink = document.createElement("a");
+			resultsLink.href = post.link;
+			const resultsLinkContent = document.createTextNode(post.title.rendered);
+			// append link text to link
+			// (the text is a Node so it needs appendChild, the others could use append)
+			// (caniuse says append has 93% support so probably not)
+			resultsLink.appendChild(resultsLinkContent);
+			// append link to li
+			resultsLi.appendChild(resultsLink);
+			// append li to ul
+			resultsList.appendChild(resultsLi);
+		});
+
+		// append the populated ul to the resultsDiv
+		// this.resultsDiv.appendChild(resultsList);
+
+		// try with insertBefore
+		// (If referenceNode is null, then newNode is inserted at the end of node's child nodes.)
+		this.resultsDiv.insertBefore(resultsList, null); // yep, works
+
+		// const searchItems = posts.map((item) => `<li><a href="${item.link}">${item.title.rendered}</a></li>`).join("");
+
+		// const searchListEl = this.resultsDiv.querySelector(".link-list");
+		// searchListEl.innerHTML = searchItems;
+
+		// this.isSpinnerVisible = false;
+	}
+
 	async getResults() {
 		// console.log("timed out, start the search!");
 		// clearTimeout(this.typingTimeout);
@@ -101,11 +156,8 @@ class Search {
 		// NB variables are fine here bc they are scoped to a method (getResults)
 		// they would not be allowed in the main scope of the class
 		// const searchQuery = this.searchField.value;
-		const response = await fetch(
-			"http://amazing-college-xampp.local/wp-json/wp/v2/posts?search=" + this.searchField.value
-		);
-		const posts = await response.json();
-		alert(posts[0].title.rendered);
+		this.doFetch("http://amazing-college-xampp.local/wp-json/wp/v2/posts?search=", this.searchField.value);
+		// console.log(`posts: ${posts}`);
 	}
 
 	handleKeyPress(e) {
