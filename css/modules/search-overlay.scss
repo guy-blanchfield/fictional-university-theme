@@ -106,13 +106,15 @@
 		width: 80%;
 		font-size: 3rem;
 	}
-}
 
-// added by guy to fix placeholder colour in firefox
-// (other browsers default to grey)
-// caniuse says 96% support so no need for prefix
-.search-term::placeholder {
-	color: #333;
+	// added by guy to fix placeholder colour in firefox
+	// (other browsers default to grey)
+	// caniuse says 96% support so no need for prefix
+	&::placeholder {
+		color: #7f7f7f; // 50% gray
+		// firefox will default to a lower opacity so force it here
+		opacity: 1;
+	}
 }
 
 .body-no-scroll {

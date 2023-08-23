@@ -81,6 +81,16 @@ function university_files() {
     wp_enqueue_style('university_main_styles', get_theme_file_uri('/build/style-index.css'));
     wp_enqueue_style('university_extra_styles', get_theme_file_uri('/build/index.css'));
     // NB link for external stylesheets starts with double slash - i.e. no http
+
+    // output some js data into the html source of every page
+    // takes 3 args
+    // the script handle the data will be attached to, 
+    // a nickname for the js object
+    // and the data itself in key value pairs (can be single or multi-dimesional array)
+    // NB wp_add_inline_script() might be best practice for this
+    wp_localize_script('main-university-js', 'universityData', array(
+        'root_url' => get_site_url()
+    ));
 }
 
 

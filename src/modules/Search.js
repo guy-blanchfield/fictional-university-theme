@@ -3,6 +3,10 @@
 class Search {
 	// 1. describe and create/initiate our object
 	constructor() {
+		this.addSearchHTML();
+		// create a post property for the fetched, jsoned result
+		this.posts;
+
 		this.resultsDiv = document.querySelector("#search-overlay__results");
 		// NB! there are two js-search-trigger buttons (one for mobile nav one for desktop nav)
 		// so use querySelectorAll and some kind of loop to add the event listeners
@@ -55,7 +59,7 @@ class Search {
 	// 3. methods (function, action...)
 	handleTyping() {
 		// check if user has actually changed the searchField
-		// so otherwise it's going to run on every key press
+		// otherwise it's going to run on every key press
 		// (shift, control, arrows etc)
 		if (this.searchField.value != this.previousValue) {
 			// console.log("handleTyping");
@@ -75,38 +79,56 @@ class Search {
 			} else {
 				// if field is empty clear the results div
 				// and update spinner state
-				this.resultsDiv.innerHTML = "";
-				this.isSpinnerVisible = false;
+				console.log("clearing results div from handleTyping");
+				this.clearResults();
 			}
 		}
 
 		this.previousValue = this.searchField.value;
 	}
 
+	// despite the name, this method is mostly to clear the spinner
+	clearResults() {
+		// clear out the resultsDiv
+		this.resultsDiv.textContent = "";
+		// update spinner state
+		this.isSpinnerVisible = false;
+	}
+
 	async doFetch(url, query) {
 		const response = await fetch(url + query);
-		const posts = await response.json();
+		// json the response and store it in a property
+		// (created in constructor)
+		// so other methods can use it
+		this.posts = await response.json();
+	}
 
-		// then do something with the results
-		console.log(`posts[0].title.rendered: ${posts[0].title.rendered}`);
-		// let testArray = ["red", "orange", "yellow"];
+	async getResults() {
+		// NB variables are fine here bc they are scoped to a method (getResults)
+		// they would not be allowed in the main scope of the class
 
-		//  clear out the resultsDiv
-		this.resultsDiv.textContent = "";
+		// do the fetch
+		await this.doFetch(universityData.root_url + "/wp-json/wp/v2/posts?search=", this.searchField.value);
+
+		this.clearResults();
 
 		// the heading
 		const resultsHeading = document.createElement("h2");
-		resultsHeading.classList.add("search-overlay__section-title");
-		const resultsHeadingContent = document.createTextNode("General Information");
-		resultsHeading.appendChild(resultsHeadingContent);
+		resultsHeading.className = "search-overlay__section-title";
+		// const resultsHeadingContent = document.createTextNode("General Information");
+		// resultsHeading.appendChild(resultsHeadingContent);
+		// for this purpose textContent is no different to createTextNode
+		// except it's a line shorter
+		resultsHeading.textContent = "General Information";
 		// the ul
 		const resultsList = document.createElement("ul");
-		resultsList.classList.add("link-list", "min-list");
-		// const searchListItem = createTextNode('General Information');
-		this.resultsDiv.appendChild(resultsHeading);
-		this.resultsDiv.appendChild(resultsList);
+		resultsList.className = "link-list min-list";
 
-		posts.forEach((post) => {
+		// we write the heading no matter what
+		this.resultsDiv.insertBefore(resultsHeading, null);
+
+		// this can run unconditionally bc it'll do nothing if there are no results
+		this.posts.forEach((post) => {
 			// the li
 			const resultsLi = document.createElement("li");
 			// the link
@@ -123,41 +145,20 @@ class Search {
 			resultsList.appendChild(resultsLi);
 		});
 
-		// append the populated ul to the resultsDiv
-		// this.resultsDiv.appendChild(resultsList);
-
-		// try with insertBefore
-		// (If referenceNode is null, then newNode is inserted at the end of node's child nodes.)
-		this.resultsDiv.insertBefore(resultsList, null); // yep, works
-
-		// const searchItems = posts.map((item) => `<li><a href="${item.link}">${item.title.rendered}</a></li>`).join("");
-
-		// const searchListEl = this.resultsDiv.querySelector(".link-list");
-		// searchListEl.innerHTML = searchItems;
-
-		// this.isSpinnerVisible = false;
-	}
-
-	async getResults() {
-		// console.log("timed out, start the search!");
-		// clearTimeout(this.typingTimeout);
-		// this.typingTimeout = null;
-		// console.log(`typingTimeout: ${this.typingTimeout}`);
-
-		// Brad's code uses jQuery html()
-		// let's do this without innerHTML
-		// do as innerHTML first, then refactor
-		// const tempResults = this.resultsDiv.innerHTML;
-		// console.log(`this.resultsDiv.innerHTML: ${this.resultsDiv.innerHTML}`);
-		// this.resultsDiv.innerHTML = "Imagine real search results here";
-		// this.isSpinnerVisible = false;
-		// console.log(`this.resultsDiv.innerHTML: ${this.resultsDiv.innerHTML}`);
-
-		// NB variables are fine here bc they are scoped to a method (getResults)
-		// they would not be allowed in the main scope of the class
-		// const searchQuery = this.searchField.value;
-		this.doFetch("http://amazing-college-xampp.local/wp-json/wp/v2/posts?search=", this.searchField.value);
-		// console.log(`posts: ${posts}`);
+		// this is where we need some conditions
+		// if we have results write the ul
+		// brad did this as ternary bc its all in template literal
+		// in arrow function within jQuery getJSON()
+		// else write 'no information' message
+		if (this.posts.length) {
+			// try with insertBefore (marginally quicker than appendChild)
+			// (If referenceNode is null, then newNode is inserted at the end of node's child nodes.)
+			this.resultsDiv.insertBefore(resultsList, null);
+		} else {
+			const resultsPara = document.createElement("p");
+			resultsPara.textContent = "No general information matches that search.";
+			this.resultsDiv.insertBefore(resultsPara, null);
+		}
 	}
 
 	handleKeyPress(e) {
@@ -173,10 +174,29 @@ class Search {
 		}
 	}
 
+	searchFocus() {
+		// this method is a callback for the transitionend eventlistener
+		this.searchOverlay.addEventListener("transitionend", () => {
+			this.searchField.focus();
+		});
+	}
+
 	openOverlay() {
 		console.log("openOverlay");
 		this.searchOverlay.classList.add("search-overlay--active");
 		document.body.classList.add("body-no-scroll");
+		// set focus to search field
+		console.log(`setting focus to ${this.searchField}`);
+
+		// the search overlay has an opacity transition
+		// so focus won't work till it's fully visible
+		// so set an eventlistener for transitionend
+		// and use that to call the searchfocus method
+		this.searchOverlay.addEventListener("transitionend", this.searchFocus.bind(this));
+
+		// this.searchField.focus();
+		// we're definitely targeting it, but not focusing it
+		// this.searchField.style.visibility = "hidden";
 		this.isOverlayOpen = true;
 	}
 
@@ -184,7 +204,36 @@ class Search {
 		console.log("closeOverlay");
 		this.searchOverlay.classList.remove("search-overlay--active");
 		document.body.classList.remove("body-no-scroll");
+
+		// remove the transitionend eventlistener
+		this.searchOverlay.removeEventListener("transitionend", this.searchFocus);
+
 		this.isOverlayOpen = false;
+	}
+
+	// insert the search div html
+	addSearchHTML() {
+		console.log("Adding search HTML");
+		// suppose we're gonna have to use insertAdjacentHTML
+		// just this once
+		document.body.insertAdjacentHTML(
+			"beforeend",
+			`
+			<div class="search-overlay">
+				<div class="search-overlay__top">
+				<div class="container">
+					<i class="fa fa-search search-overlay__icon" aria-hidden="true"></i>
+					<input type="text" class="search-term" placeholder="What are you looking for?" autocomplete="off" id="search-term">
+					<i class="fa fa-window-close search-overlay__close" aria-hidden="true"></i>
+				</div>
+				</div>
+			
+				<div class="container">
+				<div id="search-overlay__results"></div>
+				</div>
+			</div>
+		`
+		);
 	}
 }
 
