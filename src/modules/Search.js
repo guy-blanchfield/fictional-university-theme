@@ -179,6 +179,10 @@ class Search {
 			resultsLink.appendChild(resultsLinkContent);
 			// append link to li
 			resultsLi.appendChild(resultsLink);
+			// append authorName to li
+			const resultsAuthor = document.createTextNode(result.type === "post" ? ` by ${result.authorName} ` : "");
+			// append authorName to li
+			resultsLi.appendChild(resultsAuthor);
 			// append li to ul
 			resultsList.appendChild(resultsLi);
 		});

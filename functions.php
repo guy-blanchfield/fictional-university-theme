@@ -1,5 +1,23 @@
 <?php 
 
+
+function university_custom_rest() {
+    // add new property to the rest api
+    register_rest_field('post', 'authorName', array(
+        // field will be set to the value that is returned by this function
+        // the function doesn't need to be a wp function
+        // it can be any php
+        'get_callback' => function() { 
+            return get_the_author();
+        }
+    ));
+}
+
+// add_action takes 2 args
+// the wp process we want to hook onto
+// and the function to call
+add_action('rest_api_init', 'university_custom_rest');
+
 function pageBanner($args = NULL) {
     // php logic will live here
 
