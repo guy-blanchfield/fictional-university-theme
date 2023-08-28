@@ -102,6 +102,7 @@ class Search {
 		// so other methods can use it
 		// const data = await response.json();
 		// return data;
+		// console.log(`doFetch response: ${response}`);
 		return await response.json();
 	}
 
@@ -119,16 +120,29 @@ class Search {
 
 		// nb tried putting .catch() on the end of Promise.all - didn't take
 		try {
+			/* don't need the promise.all, we now only need one fetch with custom api route
 			const [posts, pages] = await Promise.all([
 				this.doFetch(universityData.root_url + "/wp-json/wp/v2/posts?search=", this.searchField.value),
 				this.doFetch(universityData.root_url + "/wp-json/wp/v2/pages?search=", this.searchField.value),
 			]);
+			*/
+
+			const results = await this.doFetch(
+				universityData.root_url + "/wp-json/university/v1/search?term=",
+				this.searchField.value
+			);
 
 			// spread (sources must be arrays):
 			// const combinedResults = [...posts, ...pages]
 			// concat (sources could be anything, should still work)
-			const combinedResults = posts.concat(pages);
-			this.displayResults(combinedResults);
+			// const combinedResults = posts.concat(pages);
+			// this.displayResults(combinedResults);
+
+			//  maybe check which categories have content?
+			// or just loop through the results, calling the displayColumn each time
+			// this.displayResultsColumn(results.category, 'Category Title');
+
+			this.displayResults(results);
 		} catch (err) {
 			this.clearResults();
 			console.log(`error: ${err}`);
@@ -143,64 +157,102 @@ class Search {
 		}
 	}
 
+	// this is going to create the 3 column structure with in resultsDiv
+	// displayResultColumn will fill each column in or maybe not!!
+	// use insertAdjacentHTML or innerHTML for now
 	displayResults(results) {
-		// update the results div
-
+		// console.log(`Displaying results: ${results.generalInfo}`);
 		// start by clearing it out (the spinner probably)
 		// and updating the spinner state
 		this.clearResults();
 
-		// the heading
-		const resultsHeading = document.createElement("h2");
-		resultsHeading.className = "search-overlay__section-title";
-		// const resultsHeadingContent = document.createTextNode("General Information");
-		// resultsHeading.appendChild(resultsHeadingContent);
-		// for this purpose textContent is no different to createTextNode
-		// except it's a line shorter
-		resultsHeading.textContent = "General Information";
-		// the ul
-		const resultsList = document.createElement("ul");
-		resultsList.className = "link-list min-list";
+		// each category is going to have a different display
+		// e.g. professors will have a thumbnail, events will have
+		// a circle with the date in it etc
+		// so this is probably best done long hand, in the innerHTML
+		// with a template literal
 
-		// we write the heading no matter what
-		this.resultsDiv.insertBefore(resultsHeading, null);
+		this.resultsDiv.innerHTML = `
+			<div class="row">
+				<div class="one-third">
+					<h2 class="search-overlay__section-title">General Information</h2>
+					${
+						results.generalInfo.length
+							? `<ul class="link-list min-list">
+								${results.generalInfo
+									.map(
+										(result) =>
+											`<li><a href="${result.permalink}">${result.title}</a>${
+												result.postType == "post" ? ` by ${result.author}` : ""
+											}</li>`
+									)
+									.join("")}
+								</ul>`
+							: `<p>No general information matches that search.</p>`
+					}
 
-		// this can run unconditionally bc it'll do nothing if there are no results
-		results.forEach((result) => {
-			// the li
-			const resultsLi = document.createElement("li");
-			// the link
-			const resultsLink = document.createElement("a");
-			resultsLink.href = result.link;
-			const resultsLinkContent = document.createTextNode(result.title.rendered);
-			// append link text to link
-			// (the text is a Node so it needs appendChild, the others could use append)
-			// (caniuse says append has 93% support so probably not)
-			resultsLink.appendChild(resultsLinkContent);
-			// append link to li
-			resultsLi.appendChild(resultsLink);
-			// append authorName to li
-			const resultsAuthor = document.createTextNode(result.type === "post" ? ` by ${result.authorName} ` : "");
-			// append authorName to li
-			resultsLi.appendChild(resultsAuthor);
-			// append li to ul
-			resultsList.appendChild(resultsLi);
-		});
-
-		// this is where we need some conditions
-		// if we have results write the ul
-		// brad did this as ternary bc its all in template literal
-		// in arrow function within jQuery getJSON()
-		// else write 'no information' message
-		if (results.length) {
-			// try with insertBefore (marginally quicker than appendChild)
-			// (If referenceNode is null, then newNode is inserted at the end of node's child nodes.)
-			this.resultsDiv.insertBefore(resultsList, null);
-		} else {
-			const resultsPara = document.createElement("p");
-			resultsPara.textContent = "No general information matches that search.";
-			this.resultsDiv.insertBefore(resultsPara, null);
-		}
+				</div>
+				<div class="one-third">
+					<h2 class="search-overlay__section-title">Programs</h2>
+					${
+						results.programs.length
+							? `<ul class="link-list min-list">
+								${results.programs.map((result) => `<li><a href="${result.permalink}">${result.title}</a></li>`).join("")}
+								</ul>`
+							: `<p>No programs match that search. <a href="${universityData.root_url}/programs">View all programs</a></p>`
+					}
+					<h2 class="search-overlay__section-title">Professors</h2>
+					${
+						results.professors.length
+							? `<ul class="professor-cards">
+								${results.professors
+									.map(
+										(result) => `
+											<li class="professor-card__list-item">
+												<a class="professor-card" href="${result.permalink}">
+													<img class="professor-card__image" src="${result.thumbnail}">
+													<span class="professor-card__name">${result.title}</span>
+												</a>
+											</li>
+											`
+									)
+									.join("")}
+								</ul>`
+							: `<p>No professors match that search.</p>`
+					}
+				</div>
+				<div class="one-third">
+					<h2 class="search-overlay__section-title">Campuses</h2>
+					${
+						results.campuses.length
+							? `<ul class="link-list min-list">
+								${results.campuses.map((result) => `<li><a href="${result.permalink}">${result.title}</a></li>`).join("")}
+								</ul>`
+							: `<p>No campuses match that search. <a href="${universityData.root_url}/campuses">View all campuses</a></p>`
+					}
+					<h2 class="search-overlay__section-title">Events</h2>
+					${
+						results.events.length
+							? results.events
+									.map(
+										(result) =>
+											`<div class="event-summary">
+									<a class="event-summary__date t-center" href="${result.permalink}">
+										<span class="event-summary__month">${result.month}</span>
+										<span class="event-summary__day">${result.day}</span>
+									</a>
+									<div class="event-summary__content">
+										<h5 class="event-summary__title headline headline--tiny"><a href="${result.permalink}">${result.title}</a></h5>
+										<p>${result.description} <a href="${result.permalink}" class="nu gray">Learn more</a></p>
+									</div>
+								</div>`
+									)
+									.join("")
+							: `<p>No events match that search.</p> <a href="${universityData.root_url}/events">View all events</a></p>`
+					}
+				</div>
+			</div>
+		`;
 	}
 
 	handleKeyPress(e) {
