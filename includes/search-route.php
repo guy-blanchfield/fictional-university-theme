@@ -62,9 +62,24 @@ function universitySearchResults($data) {
         }
 
         if (get_post_type() == 'program') {
+
+            // find any related campuses
+            $relatedCampuses = get_field('related_campus');
+            if ($relatedCampuses) {
+                foreach($relatedCampuses as $campus) {
+                    array_push($results['campuses'], array(
+                        'title' => get_the_title($campus),
+                        'permalink' => get_the_permalink($campus)
+                    ));
+                }
+            }
+            
             array_push($results['programs'], array(
                 'title' => get_the_title(),
-                'permalink' => get_the_permalink()
+                'permalink' => get_the_permalink(),
+                // outputting the id here so it can be used in the
+                // related programs search custom query below
+                'id' => get_the_id()
             ));
         }
 
@@ -73,7 +88,7 @@ function universitySearchResults($data) {
             $eventDate = new DateTime(get_field('event_date'));
 
             $description = null;
-            if(has_excerpt()) {
+            if (has_excerpt()) {
                 $description = get_the_excerpt();
             } else {
                 $description = wp_trim_words(get_the_content(), 18); 
@@ -96,42 +111,78 @@ function universitySearchResults($data) {
         }
     }
 
-    // another custom query for the related programs search
-    $programRelationshipQuery = new WP_Query(array(
-        'post_type' => 'professor',
-        // meta_query takes an array of filters (each filter is an array)
-        'meta_query' => array(
-            array(
+    
+    // if there are any programs returned by the main search query
+    // create a new query to go through the professors posts
+    // and see which ones match those programs
+    if ($results['programs']) {
+        // create a var for handling multidimensional programs
+        // e.g. if there was multiple sub programs
+        // human biology, marine biology etc
+        $programsMetaQuery = array('relation' => 'OR');
+
+        foreach($results['programs'] as $program) {
+            array_push($programsMetaQuery, array(
                 'key' => 'related_programs',
                 // we're not looking for an exact or number match just strings
                 'compare' => 'LIKE',
-                'value' => '"' . get_the_ID() . '"'
-            )
-        )
-    ));
-
-    // now loop through the posts returned by the custom query
-    while ($programRelationshipQuery->have_posts()) {
-        $programRelationshipQuery->the_post();
-
-        if (get_post_type() == 'professor') {
-            array_push($results['professors'], array(
-                'title' => get_the_title(),
-                'permalink' => get_the_permalink(),
-                // the first arg here (0) means the current post
-                'thumbnail' => get_the_post_thumbnail_url(0, 'professorLandscape')
+                'value' => '"' . $program['id'] . '"'
             ));
         }
+
+        // a different custom query for the related programs search
+        $programRelationshipQuery = new WP_Query(array(
+            'post_type' => array('professor', 'event'),
+            // meta_query takes an array of filters (each filter is an array)
+            'meta_query' => $programsMetaQuery
+        ));
+
+        // now loop through the posts returned by the custom query
+        while ($programRelationshipQuery->have_posts()) {
+            $programRelationshipQuery->the_post();
+
+            if (get_post_type() == 'professor') {
+                array_push($results['professors'], array(
+                    'title' => get_the_title(),
+                    'permalink' => get_the_permalink(),
+                    // the first arg here (0) means the current post
+                    'thumbnail' => get_the_post_thumbnail_url(0, 'professorLandscape')
+                ));
+            }
+
+            if (get_post_type() == 'event') {
+
+                $eventDate = new DateTime(get_field('event_date'));
+
+                $description = null;
+                if(has_excerpt()) {
+                    $description = get_the_excerpt();
+                } else {
+                    $description = wp_trim_words(get_the_content(), 18); 
+                }
+
+                array_push($results['events'], array(
+                    'title' => get_the_title(),
+                    'permalink' => get_the_permalink(),
+                    'month' => $eventDate->format('M'),
+                    'day' => $eventDate->format('d'),
+                    'description' => $description
+                ));
+            }
+        }
+
+        // remove any duplicates from the professors array
+        // we wrap array_unique() in array_values() to get rid of the keys that
+        // array_unique() creates
+        // not sure we need this, my json looks different to brad's
+        // yeah hasn't made any difference afaik
+        // maybe it's a postman thing
+        $results['professors'] = array_values(array_unique($results['professors'], SORT_REGULAR));
+        $results['events'] = array_values(array_unique($results['events'], SORT_REGULAR));
+
     }
 
-    // remove any duplicates from the professors array
-    // we wrap array_unique() in array_values() to get rid of the keys that
-    // array_unique() creates
-    // not sure we need this, my json looks different to brad's
-    // yeah hasn't made any difference afaik
-    // maybe it's a postman thing
-    $results['professors'] = array_values(array_unique($results['professors'], SORT_REGULAR));
-
+    
     return $results;
 }
 
