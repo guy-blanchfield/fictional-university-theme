@@ -44,8 +44,16 @@ class Search {
 		// so foreach the list returned by querySelectorAll
 		this.openButtons.forEach((openButton) => {
 			// bind to 'this' otherwise the callback changes 'this' to the event target
-			openButton.addEventListener("click", this.openOverlay.bind(this));
+			// actually brad's non jquery version uses preventDefault (possibly because there's
+			// a noscript fallback where the icon functions as a link to the non js search)
+			// so put both in an arrow function and we won't need the bind
+			openButton.addEventListener("click", (e) => {
+				e.preventDefault();
+				this.openOverlay();
+			});
 		});
+		// NB in brad's no jquery version, he uses arrows instead of binds
+		// let's keep the binds - there doesn't appear to be any performance difference
 		this.closeButton.addEventListener("click", this.closeOverlay.bind(this));
 		// keypresses
 		document.addEventListener("keydown", this.handleKeyPress.bind(this));
@@ -294,6 +302,11 @@ class Search {
 		this.clearResults();
 
 		this.isOverlayOpen = true;
+
+		// to stop the link going to /search
+		// do we need this in addition to preventDefault on the eventListener callback?
+		// apparently not
+		// return false;
 	}
 
 	closeOverlay() {
