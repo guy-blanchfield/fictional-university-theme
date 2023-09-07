@@ -193,4 +193,53 @@ function universityMapKey($api) {
 }
 add_filter('acf/fields/google_map/api', 'universityMapKey');
 
+// Redirect subscriber accounts out of admin and onto homepage
+add_action('admin_init', 'redirectSubsToFrontend');
+
+function redirectSubsToFrontend() {
+    $ourCurrentUser = wp_get_current_user();
+
+    if (count($ourCurrentUser->roles) == 1 AND ($ourCurrentUser->roles[0] == 'subscriber')) {
+        wp_redirect(site_url('/'));
+        exit;
+    }
+}
+
+// Hide admin bar for logged in subscribers
+add_action('wp_loaded', 'noSubsAdminBar');
+
+function noSubsAdminBar() {
+    $ourCurrentUser = wp_get_current_user();
+
+    if (count($ourCurrentUser->roles) == 1 AND ($ourCurrentUser->roles[0] == 'subscriber')) {
+        show_admin_bar(false);
+    }
+}
+
+// Customise login screen
+add_filter('login_headerurl', 'ourHeaderUrl');
+
+function ourHeaderUrl() {
+    return esc_url(site_url('./'));
+}
+
+// Customise login header title
+add_filter('login_headertitle', 'ourHeaderTitle');
+
+function ourHeaderTitle() {
+    return get_bloginfo('name');
+}
+
+// use custom css on the login screen
+add_action('login_enqueue_scripts', 'ourLoginCSS');
+
+function ourLoginCSS() {
+    // this is the same as in university_files()
+    // (the four wp_enqueue_style statements)
+    wp_enqueue_style('custom-google-fonts', '//fonts.googleapis.com/css?family=Roboto+Condensed:300,300i,400,400i,700,700i|Roboto:100,300,400,400i,700,700i');
+    wp_enqueue_style('font-awesome', '//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css');
+    wp_enqueue_style('university_main_styles', get_theme_file_uri('/build/style-index.css'));
+    wp_enqueue_style('university_extra_styles', get_theme_file_uri('/build/index.css'));
+}
+
 ?>
