@@ -108,7 +108,10 @@ function university_files() {
     // and the data itself in key value pairs (can be single or multi-dimesional array)
     // NB wp_add_inline_script() might be best practice for this
     wp_localize_script('main-university-js', 'universityData', array(
-        'root_url' => get_site_url()
+        'root_url' => get_site_url(),
+        // the nonce
+        // this will add the nonce to universityData, if the user is logged in
+        'nonce' => wp_create_nonce('wp_rest')
     ));
 }
 
