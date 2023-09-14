@@ -17,6 +17,7 @@
     "@glidejs/glide": "^3.4.1",
     "@wordpress/scripts": "*",
     "axios": "^0.21.1",
+    "dompurify": "^3.0.5",
     "normalize.css": "^8.0.1"
   }
 }

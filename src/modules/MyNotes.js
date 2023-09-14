@@ -1,5 +1,10 @@
+// we need DOMPurify for the innerHTML stuff
+import { sanitize } from "dompurify";
+
 class MyNotes {
 	constructor() {
+		// get ref to #my-notes, we'll need it more than once
+		this.myNotesUl = document.querySelector("#my-notes");
 		this.events();
 	}
 
@@ -12,6 +17,13 @@ class MyNotes {
 			deleteBtn.addEventListener("click", this.deleteNote);
 		}
 
+		// we need to add event listener to the ul (#my-notes)
+		// then checks if the click has come from '.delete-note'
+		// event delegation?
+
+		this.myNotesUl.addEventListener("click", this.handleMyNotesClick.bind(this));
+
+		/*
 		const editBtns = document.querySelectorAll(".edit-note");
 		for (const editBtn of editBtns) {
 			// editNote uses 'this' to call other methods
@@ -24,20 +36,56 @@ class MyNotes {
 		for (const updateBtn of updateBtns) {
 			updateBtn.addEventListener("click", this.updateNote.bind(this));
 		}
+		
+		*/
 
-		const submitNoteBtn = document.querySelector(".submit-note");
-		submitNoteBtn.addEventListener("click", this.createNote.bind(this));
+		// NB there's only ONE submit button on the page
+		// it's in the create note section
+		// and it calls create note
+		// it's NOT the update buttons
+		// it's separate from the note lis
+		const submitBtn = document.querySelector(".submit-note");
+		submitBtn.addEventListener("click", this.createNote.bind(this));
 	}
 
 	// methods
 	// --------------------------------------------------------
 
-	async createNote() {
-		const url = universityData.root_url + "/wp-json/wp/v2/note/";
+	//  event delegation
+	handleMyNotesClick(e) {
+		console.log("handleMyNotesClick");
+		console.log(e);
 
+		if (e.target.className.includes("delete-note")) {
+			this.deleteNote(e);
+			return;
+		}
+
+		if (e.target.className.includes("edit-note")) {
+			this.editNote(e);
+			return;
+		}
+
+		if (e.target.className.includes("update-note")) {
+			this.updateNote(e);
+			return;
+		}
+
+		if (e.target.className.includes("create-note")) {
+			this.createNote();
+			return;
+		}
+	}
+
+	async createNote() {
 		//  get refs to the fields, we're gonna need them more than once
 		const titleField = document.querySelector(".new-note-title");
 		const bodyField = document.querySelector(".new-note-body");
+
+		// if fields are empty, go no further
+		if (!titleField.value && !bodyField.value) return;
+
+		const url = universityData.root_url + "/wp-json/wp/v2/note/";
 
 		const ourNewPost = {
 			title: titleField.value,
@@ -65,105 +113,69 @@ class MyNotes {
 				throw new Error(response.status);
 			}
 			// get on with stuff
-			// const result = await response.json();
-			// clear out the fields
-			titleField.value = "";
-			bodyField.value = "";
+			const result = await response.json();
+			console.log(result);
+
 			// add a new item to the list of posts (notes)
-			const newNoteLi = document.createElement("li");
-			newNoteLi.dataset.id = "1001";
-			newNoteLi.className = "fade-in-calc";
+			// const newNoteLi = document.createElement("li");
+			// newNoteLi.dataset.id = result.id;
+			// console.log(result.id);
+			// newNoteLi.className = "fade-in-calc";
 
 			// structure of the li:
 			/*
 			<input readonly class="note-title-field" type="text" value="<?php echo esc_attr(get_the_title()); ?>">
-            <span class="edit-note"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</span>
-            <span class="delete-note"><i class="fa fa-trash-o" aria-hidden="true"></i> Delete</span>
-            <textarea readonly class="note-body-field" name="" id=""><?php echo esc_attr(wp_strip_all_tags(get_the_content())); ?></textarea>
-            <span class="update-note btn btn--blue btn--small"><i class="fa fa-arrow-right" aria-hidden="true"></i> Save</span>
+			<span class="edit-note"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</span>
+			<span class="delete-note"><i class="fa fa-trash-o" aria-hidden="true"></i> Delete</span>
+			<textarea readonly class="note-body-field" name="" id=""><?php echo esc_attr(wp_strip_all_tags(get_the_content())); ?></textarea>
+			<span class="update-note btn btn--blue btn--small"><i class="fa fa-arrow-right" aria-hidden="true"></i> Save</span>
 			*/
 
-			// consider trying cloneNode for this?
+			// consider trying cloneNode for this? no b/c what if there are notes yet?
+			// do as insetAdjacentHTML but with DOMPurify (installed as dependency)
 
-			//  the input
-			const newNoteInput = document.createElement("input");
-			newNoteInput.setAttribute("readonly", "readonly");
-			newNoteInput.setAttribute("type", "text");
-			// newNoteInput.setAttribute("value", the - title);
-			newNoteInput.value = "the input text";
-			newNoteInput.className = "note-title-field";
+			// sanitize the user input (title and body)
+			const cleanTitle = sanitize(result.title.raw);
+			const cleanBody = sanitize(result.content.raw);
+			console.log("dirtyBody: " + result.content.raw);
+			console.log("cleanBody: " + cleanBody);
 
-			// the edit button
-			const newNoteEditNote = document.createElement("span");
-			newNoteEditNote.className = "edit-note";
-			const newNoteEditNoteText = document.createTextNode(" Edit");
+			// the Li
+			// not creating an element just a string
+			const newNoteLiString = `<li class="fade-in-calc" data-id="${result.id}">
+				<input readonly class="note-title-field" type="text" value="${cleanTitle}">
+				<span class="edit-note"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</span>
+				<span class="delete-note"><i class="fa fa-trash-o" aria-hidden="true"></i> Delete</span>
+				<textarea readonly class="note-body-field">${cleanBody}</textarea>
+				<span class="update-note btn btn--blue btn--small"><i class="fa fa-arrow-right" aria-hidden="true"></i> Save</span>
+				</li>`;
 
-			const newNoteEditNoteIcon = document.createElement("i");
-			newNoteEditNoteIcon.className = "fa fa-pencil";
-			newNoteEditNoteIcon.setAttribute("aria-hidden", "true");
-
-			// append the icon first
-			newNoteEditNote.appendChild(newNoteEditNoteIcon);
-			// then the textNode
-			newNoteEditNote.appendChild(newNoteEditNoteText);
-
-			// repeat for delete button
-			const newNoteDeleteNote = document.createElement("span");
-			newNoteDeleteNote.className = "delete-note";
-			const newNoteDeleteNoteText = document.createTextNode(" Delete");
-
-			const newNoteDeleteNoteIcon = document.createElement("i");
-			newNoteDeleteNoteIcon.className = "fa fa-trash-o";
-			newNoteDeleteNoteIcon.setAttribute("aria-hidden", "true");
-
-			// append the icon first
-			newNoteDeleteNote.appendChild(newNoteDeleteNoteIcon);
-			// then the textNode
-			newNoteDeleteNote.appendChild(newNoteDeleteNoteText);
-
-			// the textarea
-			const newNoteTextarea = document.createElement("textarea");
-			newNoteTextarea.setAttribute("readonly", "readonly");
-			// newNoteTextarea.setAttribute("value", the - body);
-			newNoteTextarea.value = "The text area text";
-			newNoteTextarea.className = "note-body-field";
-
-			// the update button
-			const newNoteUpdateNote = document.createElement("span");
-			newNoteUpdateNote.className = "update-note btn btn--blue btn--small";
-			const newNoteUpdateNoteText = document.createTextNode(" Save");
-
-			const newNoteUpdateNoteIcon = document.createElement("i");
-			newNoteUpdateNoteIcon.className = "fa fa-arrow-right";
-			newNoteUpdateNoteIcon.setAttribute("aria-hidden", "true");
-
-			// append the icon first
-			newNoteUpdateNote.appendChild(newNoteUpdateNoteIcon);
-			// then the textNode
-			newNoteUpdateNote.appendChild(newNoteUpdateNoteText);
-
-			const myNotesUl = document.querySelector("#my-notes");
-			// insert into fragment
-			const liFragment = new DocumentFragment();
-			// input, edit-note, delete-note, textarea, update-note
-			liFragment.appendChild(newNoteInput);
-			liFragment.appendChild(newNoteEditNote);
-			liFragment.appendChild(newNoteDeleteNote);
-			liFragment.appendChild(newNoteTextarea);
-			liFragment.appendChild(newNoteUpdateNote);
-
-			// insert the fragment in the UL
-			myNotesUl.insertBefore(liFragment, myNotesUl.firstChild);
+			// insert the string in the UL
+			this.myNotesUl.insertAdjacentHTML("afterbegin", newNoteLiString);
 			// immediately remove the fade-in class
 			// this should make it transition, hopefully - nope
 			// try a timeout, yeah that works
 			setTimeout(() => {
-				myNotesUl.firstChild.classList.remove("fade-in-calc");
+				// firstElementChild here not firstChild
+				// b/c there's some formatting text (/n/t/t etc) presumably
+				// from the template literal formatting
+				this.myNotesUl.firstElementChild.classList.remove("fade-in-calc");
+				// console.log(this.myNotesUl.firstElementChild);
 			}, 1);
+
+			// ok some issues
+			// buttons won't work on the newly created li b/c there's
+			// no event listener for them
+			// possibly run this.events()?
+			// this.events();
 
 			// myNotesUl.newNoteLi.classList.remove("fade-in-calc"); // will this work?
 			console.log(`Congrats`);
 			console.log(response);
+
+			// clear out the fields
+			titleField.value = "";
+			bodyField.value = "";
 		} catch (err) {
 			console.log("Sorry");
 			console.log(`Error: ${err}`);
