@@ -91,7 +91,14 @@ class MyNotes {
 			title: titleField.value,
 			content: bodyField.value,
 			// posts created through the rest api are drafts by default (unpublished)
-			status: "publish",
+			// status: "publish" to publish them by default
+			// but we want the notes to be private, i.e only available to the user
+			// who created them (and the admininstrator)
+
+			// the status: 'private' also needs to be enforced server side by
+			// a filter in functions.php:
+			// add_filter('wp_insert_post_data', 'makeNotePrivate');
+			status: "private",
 		};
 
 		try {

@@ -245,4 +245,18 @@ function ourLoginCSS() {
     wp_enqueue_style('university_extra_styles', get_theme_file_uri('/build/index.css'));
 }
 
+// force note posts to be private
+// the process we're hooking onto is wp_insert_post_data
+add_filter('wp_insert_post_data', 'makeNotePrivate');
+
+function makeNotePrivate($data) {
+    // if the post data is a note and is not being deleted
+    // force its status to private
+    if ($data['post_type'] == 'note' AND $data['post_status'] != 'trash') {
+        $data['post_status'] = "private";
+    }
+    
+    return $data;
+}
+
 ?>
