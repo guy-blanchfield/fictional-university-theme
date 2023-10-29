@@ -12,6 +12,20 @@ function university_custom_rest() {
             return get_the_author();
         }
     ));
+
+    // add new property to the rest that
+    // gives us the post count for the current user
+    // this will be used to hide the 'post limit reached' message
+    // in the My Notes page
+    // userNoteCount is a property name that we made up right here
+    register_rest_field('note', 'userNoteCount', array(
+        'get_callback' => function() { 
+            // count_user_posts takes 2 arguments:
+            // id of the user whose posts we're counting
+            // type of post we want to count
+            return count_user_posts(get_current_user_id(), 'note');
+        }
+    ));
 }
 
 // add_action takes 2 args
@@ -247,9 +261,32 @@ function ourLoginCSS() {
 
 // force note posts to be private
 // the process we're hooking onto is wp_insert_post_data
-add_filter('wp_insert_post_data', 'makeNotePrivate');
+// 10 is the priority (10 is the default) which would apply if there were multiple
+// functions hooking onto the wp_insert_post_data operation
+// 2 is how many parameters the makeNotePrivate function can take
+// (the second is the $postarr which is an array of additional info about the post)
+// (we need this to find out if the post has an id)
+add_filter('wp_insert_post_data', 'makeNotePrivate', 10, 2);
 
-function makeNotePrivate($data) {
+function makeNotePrivate($data, $postarr) {
+    // if the post data is a note post
+    // strip out all html before it goes in the database,
+    // just to be on the safe side
+    if ($data['post_type'] == 'note') {
+
+        // first check that the user hasn't exceeded the per-user post limit (5, but cold be anything)
+        // AND that the insert_post operation is create i.e. post doesn't have an id yet
+        if (count_user_posts(get_current_user_id(), 'note') > 4 AND !$postarr['ID']) {
+            // abort the current operation with message to the user
+            // the message will be the rest api response
+            // NB!! the response will be text not JSON
+            // so it needs to be handled with .text() not .json()
+            // see MyNotes.js > createNote() for details
+            die("You have reached your note limit.");
+        }
+        $data['post_content'] = sanitize_textarea_field($data['post_content']);
+        $data['post_title'] = sanitize_text_field($data['post_title']);
+    }
     // if the post data is a note and is not being deleted
     // force its status to private
     if ($data['post_type'] == 'note' AND $data['post_status'] != 'trash') {

@@ -3,27 +3,28 @@ import { sanitize } from "dompurify";
 
 class MyNotes {
 	constructor() {
-		// get ref to #my-notes, we'll need it more than once
-		this.myNotesUl = document.querySelector("#my-notes");
-		this.events();
+		// only run this js if page is my-notes
+		if (document.querySelector("#my-notes")) {
+			// get ref to #my-notes, we'll need it more than once
+			this.myNotesUl = document.querySelector("#my-notes");
+			//  get ref to note-limit-message, we need this a couple of times
+			this.noteLimitMessage = document.querySelector(".note-limit-message");
+			this.events();
+		}
 	}
 
 	events() {
-		// remember!! this.whatever fro properties of the object
+		// remember!! this.whatever for properties of the object
 		// (including methods!)
 		// const (or let) for variables that are scoped to a method
+
+		// addEventListener loops replaced by event delegation below
+		/*
 		const deleteBtns = document.querySelectorAll(".delete-note");
 		for (const deleteBtn of deleteBtns) {
 			deleteBtn.addEventListener("click", this.deleteNote);
 		}
 
-		// we need to add event listener to the ul (#my-notes)
-		// then checks if the click has come from '.delete-note'
-		// event delegation?
-
-		this.myNotesUl.addEventListener("click", this.handleMyNotesClick.bind(this));
-
-		/*
 		const editBtns = document.querySelectorAll(".edit-note");
 		for (const editBtn of editBtns) {
 			// editNote uses 'this' to call other methods
@@ -39,11 +40,18 @@ class MyNotes {
 		
 		*/
 
+		// we need to add event listener to the ul (#my-notes)
+		// then checks if the click has come from '.delete-note'
+		// event delegation?
+
+		this.myNotesUl.addEventListener("click", this.handleMyNotesClick.bind(this));
+
 		// NB there's only ONE submit button on the page
 		// it's in the create note section
 		// and it calls create note
 		// it's NOT the update buttons
 		// it's separate from the note lis
+
 		const submitBtn = document.querySelector(".submit-note");
 		submitBtn.addEventListener("click", this.createNote.bind(this));
 	}
@@ -77,7 +85,20 @@ class MyNotes {
 		}
 	}
 
+	findNearestParentLi(el) {
+		// console.log("findNearestParentLi, el: ", el);
+		let thisNote = el;
+		while (thisNote.tagName != "LI") {
+			thisNote = thisNote.parentElement;
+		}
+
+		return thisNote;
+	}
+
 	async createNote() {
+		// just to see if it's actually this function being called
+		// console.log("createNote()");
+
 		//  get refs to the fields, we're gonna need them more than once
 		const titleField = document.querySelector(".new-note-title");
 		const bodyField = document.querySelector(".new-note-body");
@@ -116,32 +137,58 @@ class MyNotes {
 			});
 
 			// if the response isn't in the right range
+			// we need to throw this manually because 404s and the like
+			// won't automatically cause errors (only responses greater than 500)
 			if (!response.ok) {
 				throw new Error(response.status);
+				// throw new Error("There has been an error");
 			}
+
 			// get on with stuff
-			const result = await response.json();
-			console.log(result);
+
+			// ok, the responseText that brad gets is response.text()
+			// jquery ajax must work out that the response part of the xhr
+			// isn't json, so converts it to text and assigns it to a property
+			// called responseText inside its response object
+			// so we will have to access it using response.text() instead
+
+			//  So...
+
+			// if the php function makeNotePrivate calls the die() function
+			// response will be text NOT json
+			// so response.json() will error
+			// we need to test the response and if it is text
+			// get the text message and throw an error with it
+			// if it's json carry on with the response.json
+
+			// another try catch might be a bit ugly but it's simpler than
+			// getting the content type from the headers
+
+			// NB we can't try .json() then catch .text()
+			// bc we get a 'body has already been consumed' error
+			// so we do this nifty thing with JSON.parse instead
+
+			// get the text first so we can use it in both blocks
+			const resultText = await response.text();
+			//  declare result so we can use it outside the try block
+			let result;
+
+			try {
+				// now try to parse the text as JSON
+				// this will error if resultText is just text
+				result = JSON.parse(resultText);
+				console.log(result);
+			} catch {
+				// JSON parsing failed
+				// so must be just text
+				throw new Error(resultText);
+			}
 
 			// add a new item to the list of posts (notes)
-			// const newNoteLi = document.createElement("li");
-			// newNoteLi.dataset.id = result.id;
-			// console.log(result.id);
-			// newNoteLi.className = "fade-in-calc";
-
-			// structure of the li:
-			/*
-			<input readonly class="note-title-field" type="text" value="<?php echo esc_attr(get_the_title()); ?>">
-			<span class="edit-note"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</span>
-			<span class="delete-note"><i class="fa fa-trash-o" aria-hidden="true"></i> Delete</span>
-			<textarea readonly class="note-body-field" name="" id=""><?php echo esc_attr(wp_strip_all_tags(get_the_content())); ?></textarea>
-			<span class="update-note btn btn--blue btn--small"><i class="fa fa-arrow-right" aria-hidden="true"></i> Save</span>
-			*/
-
-			// consider trying cloneNode for this? no b/c what if there are notes yet?
 			// do as insetAdjacentHTML but with DOMPurify (installed as dependency)
 
-			// sanitize the user input (title and body)
+			// first sanitize the user input (title and body)
+			// sanitize() is a method of DOMPurify, imported at the top
 			const cleanTitle = sanitize(result.title.raw);
 			const cleanBody = sanitize(result.content.raw);
 			console.log("dirtyBody: " + result.content.raw);
@@ -150,12 +197,12 @@ class MyNotes {
 			// the Li
 			// not creating an element just a string
 			const newNoteLiString = `<li class="fade-in-calc" data-id="${result.id}">
-				<input readonly class="note-title-field" type="text" value="${cleanTitle}">
-				<span class="edit-note"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</span>
-				<span class="delete-note"><i class="fa fa-trash-o" aria-hidden="true"></i> Delete</span>
-				<textarea readonly class="note-body-field">${cleanBody}</textarea>
-				<span class="update-note btn btn--blue btn--small"><i class="fa fa-arrow-right" aria-hidden="true"></i> Save</span>
-				</li>`;
+			<input readonly class="note-title-field" type="text" value="${cleanTitle}">
+			<span class="edit-note"><i class="fa fa-pencil" aria-hidden="true"></i> Edit</span>
+			<span class="delete-note"><i class="fa fa-trash-o" aria-hidden="true"></i> Delete</span>
+			<textarea readonly class="note-body-field">${cleanBody}</textarea>
+			<span class="update-note btn btn--blue btn--small"><i class="fa fa-arrow-right" aria-hidden="true"></i> Save</span>
+			</li>`;
 
 			// insert the string in the UL
 			this.myNotesUl.insertAdjacentHTML("afterbegin", newNoteLiString);
@@ -173,19 +220,29 @@ class MyNotes {
 			// ok some issues
 			// buttons won't work on the newly created li b/c there's
 			// no event listener for them
-			// possibly run this.events()?
-			// this.events();
 
-			// myNotesUl.newNoteLi.classList.remove("fade-in-calc"); // will this work?
+			// fixed with event delegation
+			// event listener is on the ul, then uses event.target
+
 			console.log(`Congrats`);
-			console.log(response);
+			// console.log(response);
 
 			// clear out the fields
 			titleField.value = "";
 			bodyField.value = "";
 		} catch (err) {
+			console.log("err.message is:", err.message);
+			// if the note limit message is in the response
+			// show the note limit message span
+			// (the message is passed when we manually throw the error)
+			if (err.message == "You have reached your note limit.") {
+				// document.querySelector(".note-limit-message").classList.add("active");
+				console.log("Show note limit message");
+				this.noteLimitMessage.classList.add("active");
+			}
+
 			console.log("Sorry");
-			console.log(`Error: ${err}`);
+			console.log(`There has been an error: ${err}`);
 		}
 	}
 
@@ -197,7 +254,8 @@ class MyNotes {
 		// for how to pass nonce to wp api using fetch
 		// console.log(e.target.parentElement);
 		// const id = e.target.parentElement?.getAttribute("data-id"); // would also work
-		const thisNote = e.target.parentElement;
+		// const thisNote = e.target.parentElement;
+		const thisNote = this.findNearestParentLi(e.target);
 		// const id = thisNote.dataset.id;
 		const url = universityData.root_url + "/wp-json/wp/v2/note/" + thisNote.dataset.id;
 		// console.log(`Url: ${url}`);
@@ -218,14 +276,20 @@ class MyNotes {
 			if (!response.ok) {
 				throw new Error(response.status);
 			}
-			// get on with stuff
-			// const result = await response.json();
+			// json() the response before we can access properties!!!
+			const result = await response.json();
 			// add css class to replace jquery slideUp()
 			// this is brad's class specific to the ul#my-notes li
 			// in css/modules/my-notes.scss
 			thisNote.classList.add("fade-out");
 			console.log(`Congrats`);
-			console.log(response);
+			// console.log(result);
+			console.log("userNoteCount is:", result.userNoteCount);
+
+			if (result.userNoteCount < 5) {
+				console.log("Hide Note Limit Message");
+				this.noteLimitMessage.classList.remove("active");
+			}
 		} catch (err) {
 			console.log("Sorry");
 			console.log(`Error: ${err}`);
@@ -241,7 +305,8 @@ class MyNotes {
 		// for how to pass nonce to wp api using fetch
 		// console.log(e.target.parentElement);
 		// const id = e.target.parentElement?.getAttribute("data-id"); // would also work
-		const thisNote = e.target.parentElement;
+		// const thisNote = e.target.parentElement;
+		const thisNote = this.findNearestParentLi(e.target);
 		// const id = thisNote.dataset.id;
 		const url = universityData.root_url + "/wp-json/wp/v2/note/" + thisNote.dataset.id;
 		// console.log(`Url: ${url}`);
@@ -292,7 +357,8 @@ class MyNotes {
 	}
 
 	editNote(e) {
-		const thisNote = e.target.parentElement;
+		// const thisNote = e.target.parentElement;
+		const thisNote = this.findNearestParentLi(e.target);
 		if (thisNote.dataset.state == "editable") {
 			// make readonly
 			this.makeNoteReadOnly(thisNote);
