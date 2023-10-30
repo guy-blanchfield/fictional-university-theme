@@ -86,6 +86,8 @@ class MyNotes {
 	}
 
 	findNearestParentLi(el) {
+		// think this function could be replaced by native 'closest()'
+		// which takes a valid css selector, so 'li' in this case
 		// console.log("findNearestParentLi, el: ", el);
 		let thisNote = el;
 		while (thisNote.tagName != "LI") {
