@@ -18,8 +18,10 @@ class Like {
 		const currentLikeBox = e.target.closest(".like-box");
 		// const currentProfessor = currentLikeBox.dataset.professor
 		if (currentLikeBox.dataset.exists == "yes") {
+			console.log(`exists is ${currentLikeBox.dataset.exists} so delete`);
 			this.deleteLike(currentLikeBox);
 		} else {
+			console.log(`exists is ${currentLikeBox.dataset.exists} so create`);
 			this.createLike(currentLikeBox);
 		}
 	}
@@ -58,7 +60,10 @@ class Like {
 				// yeah, definitely needs this!
 				"Content-Type": "application/x-www-form-urlencoded",
 				// 'Content-Type' : 'application/json',
-				// 'X-WP-Nonce' : UniversityData.nonce
+
+				// the nonce is required for wp to consider the user logged in
+				// without this, is_user_logged_in() will return false
+				"X-WP-Nonce": universityData.nonce,
 			},
 
 			body: dataUSP,
@@ -75,14 +80,53 @@ class Like {
 			if (!response.ok) {
 				throw new Error(response.status);
 			}
-			/*
-			if (someothererror) {
-				throw new Error("Some other error");
-			}
-            */
 
-			// console.log("response: ", response);
-			const data = await response.json();
+			// if the php function createLike (in includes/like-route.php)
+			// calls the die() function
+			// response will be text NOT json
+			// so response.json() will error
+			// we need to test the response and if it is text
+			// get the text message and throw an error with it
+			// if it's json carry on with the response.json
+
+			// NB we can't try .json() then catch .text()
+			// bc we get a 'body has already been consumed' error
+			// so we do this nifty thing with JSON.parse instead
+
+			// get the text first so we can use it in both blocks
+			const responseText = await response.text();
+			//  declare data so we can use it outside the try block
+			let data;
+
+			try {
+				// now try to parse the text as JSON
+				// this will error if resultText is just text
+				data = JSON.parse(responseText);
+				console.log("data from JSON parse try: ", data);
+			} catch {
+				// JSON parsing failed
+				// so must be just text
+				throw new Error(responseText);
+			}
+
+			// update the data-exists attribute
+			// (this will cause the css to fill in the heart)
+			currentLikeBox.dataset.exists = "yes";
+
+			// increment the count number
+			const likeCountEl = currentLikeBox.querySelector(".like-count");
+			// can't increment a number, only a variable
+			// i.e we can't do Number(foo)++
+			// so if we wanna do it one line it needs to be:
+			const likeCount = Number(likeCountEl.textContent) + 1;
+			likeCountEl.textContent = likeCount;
+
+			// update the data-like attribute
+			// with the value returned by the php createLike function
+			// (in includes/like-route.php)
+			// which will be the ID number of the newly created post
+			currentLikeBox.dataset.like = data;
+
 			console.log("Logging the returned data: ", data);
 		} catch (err) {
 			// catch the errors
@@ -93,8 +137,10 @@ class Like {
 	async deleteLike(currentLikeBox) {
 		// alert("delete test message");
 		console.log("deleteLike");
-
-		const data = { professorID: currentLikeBox.dataset.professor };
+		// here we need to find the id of the like post
+		// NOT the id of the professor post
+		// (it's in the like-box data-like attribute)
+		const data = { like: currentLikeBox.dataset.like };
 		// convert to URLSearchParams - this works!
 		const dataUSP = new URLSearchParams(data).toString();
 		const resource = universityData.root_url + "/wp-json/university/v1/manageLike";
@@ -103,8 +149,8 @@ class Like {
 
 			headers: {
 				// 'Content-Type' : 'application/json',
-				// 'X-WP-Nonce' : UniversityData.nonce
 				"Content-Type": "application/x-www-form-urlencoded",
+				"X-WP-Nonce": universityData.nonce,
 			},
 			body: dataUSP,
 			/*
@@ -120,15 +166,48 @@ class Like {
 			if (!response.ok) {
 				throw new Error(response.status);
 			}
-			/*
-			if (someothererror) {
-				throw new Error("Some other error");
+
+			// php deleteLike() function might return text not json
+			// the congrats message seems to be json
+			// but the die() message is text
+			// so we need to do the text json parse routine
+			// get the text first so we can use it in both blocks
+			const responseText = await response.text();
+			//  declare data so we can use it outside the try block
+			let data;
+
+			try {
+				// now try to parse the text as JSON
+				// this will error if resultText is just text
+				data = JSON.parse(responseText);
+				console.log("data from JSON parse try: ", data);
+			} catch {
+				// JSON parsing failed
+				// so must be just text
+				throw new Error(responseText);
 			}
-            */
 
 			// console.log("response: ", response);
-			const data = await response.json();
-			console.log("data: ", data);
+			// const data = await response.json();
+
+			// update the data-exists attribute
+			// (this will cause the css to hollow out the heart)
+			currentLikeBox.dataset.exists = "no";
+
+			// decrement the count number
+			const likeCountEl = currentLikeBox.querySelector(".like-count");
+			// can't decrement a number, only a variable
+			// i.e we can't do Number(foo)--
+			// so if we wanna do it one line it needs to be:
+			const likeCount = Number(likeCountEl.textContent) - 1;
+			likeCountEl.textContent = likeCount;
+
+			// update the data-like attribute
+			// the like is being deleted
+			// so set it to an empty string
+			currentLikeBox.dataset.like = "";
+
+			console.log("Logging the returned data: ", data);
 		} catch (err) {
 			// catch the errors
 			console.log("Bugger!", err);

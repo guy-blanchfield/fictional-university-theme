@@ -35,25 +35,34 @@
                         $existStatus = 'no';
                         // custom query to find all the like posts that liked this professor
                         // AND were authored by the current user
-                        $existQuery = new WP_Query(array(
-                            'author' => get_current_user_id(),
-                            'post_type' => 'like',
-                            'meta_query' => array(
-                                array(
-                                    'key' => 'liked_professor_id',
-                                    'compare' => '=',
-                                    // comparing to the current post (professor) id
-                                    'value' => get_the_ID()
+
+                        // get_current_user_id() will return 0 if user is not logged in
+                        // which is no good, so we need to first check that user is logged in
+                        // before doing the query
+                        // if not, existStatus will remain 'no'
+                        if (is_user_logged_in()) {
+                            $existQuery = new WP_Query(array(
+                            
+                                'author' => get_current_user_id(),
+                                'post_type' => 'like',
+                                'meta_query' => array(
+                                    array(
+                                        'key' => 'liked_professor_id',
+                                        'compare' => '=',
+                                        // comparing to the current post (professor) id
+                                        'value' => get_the_ID()
+                                    )
                                 )
-                            )
-                        ));
-                        // if there are more than 0 of these likes, set existStatus to 'yes'
-                        if ($existQuery->found_posts) {
-                            $existStatus = 'yes';
+                            ));
+                            // if there are more than 0 of these likes, set existStatus to 'yes'
+                            if ($existQuery->found_posts) {
+                                $existStatus = 'yes';
+                            }
                         }
+                        
 
                          ?>
-                        <span class="like-box" data-professor="<?php the_ID(); ?>" data-exists="<?php echo $existStatus; ?>">
+                        <span class="like-box" data-like="<?php if (isset($existQuery->posts[0]->ID)) echo $existQuery->posts[0]->ID; ?>" data-professor="<?php the_ID(); ?>" data-exists="<?php echo $existStatus; ?>">
                             <i class="fa fa-heart-o" aria-hidden="true"></i>
                             <i class="fa fa-heart" aria-hidden="true"></i>
                             <span class="like-count"><?php echo $likeCount->found_posts; ?></span>
