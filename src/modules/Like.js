@@ -1,7 +1,10 @@
 class Like {
 	constructor() {
-		this.likeBox = document.querySelector(".like-box");
-		this.events();
+		// only run events() if page has a like-box
+		if (document.querySelector(".like-box")) {
+			this.likeBox = document.querySelector(".like-box");
+			this.events();
+		}
 	}
 
 	events() {
